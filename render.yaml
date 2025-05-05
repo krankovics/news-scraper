@@ -1,0 +1,7 @@
+services:
+  - type: cron
+    name: news-scraper
+    runtime: python
+    schedule: "0 */2 * * *"
+    buildCommand: ""
+    startCommand: "python scrape.py"
