@@ -9,6 +9,7 @@ from email.message import EmailMessage
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# ========== HÍRFORRÁSOK ==========
 def fetch_agrarheute():
     url = "https://www.agrarheute.com/"
     response = requests.get(url)
@@ -72,6 +73,7 @@ def fetch_wiescirolnicze():
         articles.append({"title": title, "lead": lead, "link": link})
     return articles
 
+# ========== FORDÍTÁS ==========
 def translate_text(text):
     if not text:
         return ""
@@ -89,28 +91,32 @@ def translate_text(text):
         print(f"Hiba a fordításnál: {e}")
         return text
 
-def save_to_csv(translated_articles, filename):
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["title", "lead", "link"])
-        writer.writeheader()
-        writer.writerows(translated_articles)
-
-def send_email(csv_filename):
+# ========== EMAIL HTML-KÉNT ==========
+def send_email(articles):
     email_address = os.getenv("EMAIL_USER")
     email_password = os.getenv("EMAIL_PASS")
     email_to = os.getenv("EMAIL_TO")
 
+    html_lines = []
+    html_lines.append("<html><body>")
+    html_lines.append("<h2>📰 Lefordított mezőgazdasági hírek</h2>")
+
+    for article in articles:
+        html_lines.append("<hr>")
+        html_lines.append(f"<p><strong>{article['title']}</strong></p>")
+        if article["lead"]:
+            html_lines.append(f"<p><em>{article['lead']}</em></p>")
+        html_lines.append(f"<p><a href='{article['link']}'>🔗 Eredeti cikk megtekintése</a></p>")
+
+    html_lines.append("</body></html>")
+    html_content = "\n".join(html_lines)
+
     msg = EmailMessage()
-    msg["Subject"] = f"Lefordított hírek - {csv_filename}"
+    msg["Subject"] = "📰 Lefordított mezőgazdasági hírek"
     msg["From"] = email_address
     msg["To"] = email_to
-    msg.set_content(f"Csatolva találod a lefordított híreket CSV formátumban.
-
-Fájl: {csv_filename}")
-
-    with open(csv_filename, "rb") as f:
-        file_data = f.read()
-        msg.add_attachment(file_data, maintype="text", subtype="csv", filename=csv_filename)
+    msg.set_content("Ez a levél HTML formátumban készült. Kérlek, engedélyezd a megjelenítését.")
+    msg.add_alternative(html_content, subtype="html")
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
@@ -120,6 +126,7 @@ Fájl: {csv_filename}")
     except Exception as e:
         print(f"Hiba az email küldés során: {e}")
 
+# ========== FŐ FOLYAMAT ==========
 def main():
     all_articles = []
     all_articles += fetch_farmer_pl()
@@ -138,10 +145,7 @@ def main():
             "link": article["link"]
         })
 
-    date_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    filename = f"translated_news_{date_str}.csv"
-    save_to_csv(translated_articles, filename)
-    send_email(filename)
+    send_email(translated_articles)
     print(f"{len(translated_articles)} hír lefordítva és elküldve.")
 
 if __name__ == "__main__":
