@@ -80,9 +80,7 @@ def translate_text(text):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Te egy profi magyar fordító vagy."},
-                {"role": "user", "content": f"Fordítsd le magyarra:
-
-{text}"}
+                {"role": "user", "content": f"Fordítsd le magyarra:\n\n{text}"}
             ],
             temperature=0.5
         )
